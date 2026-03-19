@@ -17,8 +17,7 @@ Use the server file for gameplay rules such as health scaling, damage typing, mu
 ## How to edit safely
 
 1. Close the game or return to the main menu before editing by hand.
-2. Edit the correct TOML file.
-3. For server config changes, reload with `/ch reload` after re-entering the world or on a running server.
+3. For in-game server config changes (via the pause menu mod settings), reload with `/ch reload` after re-entering the world or on a running server.
 4. For client HUD changes, restart the client if the HUD does not refresh immediately.
 
 Notes:
