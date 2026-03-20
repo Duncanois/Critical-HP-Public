@@ -10,15 +10,15 @@ Critical HP uses two config scopes:
 - Active world or server config: `<world>/serverconfig/criticalhp-server.toml`
 - Default template for new worlds: `defaultconfigs/criticalhp-server.toml`
 
-Use the client file for HUD and local display options.
-
 Use the server file for gameplay rules such as health scaling, damage typing, multipliers, and effects. In singleplayer, this is still the world-scoped server config inside the save.
+
+For this release, the client file has no active user-facing Critical HP HUD options.
 
 ## How to edit safely
 
 1. Close the game or return to the main menu before editing by hand.
-3. For in-game server config changes (via the pause menu mod settings), reload with `/ch reload` after re-entering the world or on a running server.
-4. For client HUD changes, restart the client if the HUD does not refresh immediately.
+2. For in-game server config changes (via the pause menu mod settings), reload with `/ch reload` after re-entering the world or on a running server.
+3. For server config changes, reload with `/ch reload` after re-entering the world or on a running server.
 
 Notes:
 
@@ -33,9 +33,9 @@ Critical HP uses three damage classes:
 
 - `slash`
 - `pierce`
-- `blunt`
+- Crushing, which still uses the config value `blunt`
 
-Use those exact values in all combat mappings.
+Use those exact config values in all combat mappings. The UI may show `Crushing`, but the TOML and rule syntax still use `blunt`.
 
 ## Health section
 
@@ -128,9 +128,9 @@ Examples:
 - `msg_id:cactus=pierce`
 - `attacker_entity:minecraft:iron_golem=blunt`
 
-Compatibility note:
+Note:
 
-- Older configs may use `damage_type:minecraft:arrow=pierce` or `damage_type_tag:minecraft:is_projectile=pierce`. Those legacy forms are still understood, but the simplified forms above are preferred for new edits.
+- For new edits, prefer the simplified forms above.
 
 ### Entity damage multipliers
 
@@ -181,6 +181,7 @@ Important:
 - This reduction applies to both players and mobs.
 - If TerraFirmaCraft armor resistance reduction is also enabled, both reductions apply together.
 - The combined multiplier is clamped into a safe `0.0` to `1.0` range.
+- This armor logic only reduces Critical HP effect proc chance. Vanilla armor damage reduction still comes from Minecraft, TFC, and any other mod that changes raw incoming damage.
 
 ## Effect settings
 
@@ -196,7 +197,7 @@ Exact nested path format:
 
 Where:
 
-- `<damage_type>` is one of `slash`, `pierce`, or `blunt`
+- `<damage_type>` is one of `slash`, `pierce`, or `blunt` (`blunt` is labeled as `Crushing` in the UI)
 - `<effect_key>` is the effect id normalized into a config key
 
 Effect key normalization rule:
@@ -241,7 +242,7 @@ amplifier = 1
 Default behavior summary:
 
 - `pierce` tends to apply debuffs such as weakness and mining fatigue
-- `blunt` tends to apply blindness or nausea
+- `Crushing` tends to apply blindness or nausea
 - `slash` tends to apply wither, slowness, or weakness
 
 Important behavior:
@@ -266,6 +267,12 @@ What these do:
 - `enableTfcCompat`: enables TFC-specific hooks such as weapon classification and health-display compatibility.
 - `enableTfcArmorResistanceChanceReduction`: lowers effect proc chance based on worn TFC armor resistances.
 - `tfcArmorResistanceChanceReductionPerPoint`: amount removed from effect chance for each resistance point.
+
+Defaults:
+
+- `enableTfcCompat` defaults to `true`
+- `enableTfcArmorResistanceChanceReduction` defaults to `true`
+- These hooks remain inert on non-TFC modpacks because the runtime checks whether TFC is actually loaded before applying them.
 
 How this interacts with normal armor reduction:
 
@@ -308,39 +315,9 @@ Enable this when testing new weapon rules, non-weapon rules, or mob multipliers.
 
 ## HUD section
 
-Client file section:
+Critical HP's custom HUD is disabled for this release.
 
-```toml
-[hud]
-enableHudOverlayIntegration = true
-showHudOutsideSurvival = true
-replaceVanillaHearts = false
-showCustomHealthBar = false
-showCustomHealthText = false
-```
-
-What each setting does:
-
-- `enableHudOverlayIntegration`: enables Critical HP HUD handling and overlay interception.
-- `showHudOutsideSurvival`: allows the Critical HP HUD to render outside normal survival HUD contexts such as creative mode. Disable it if you want the HUD limited to survival-style gameplay only.
-- `replaceVanillaHearts`: replaces the standard player health display when the layout is compatible.
-- `showCustomHealthBar`: draws the custom Critical HP bar.
-- `showCustomHealthText`: shows numeric HP text.
-
-Current behavior note:
-
-- In large modpacks, some UI mods can clear Forge overlay registrations after startup.
-- Critical HP now also renders inline during intercepted health overlay events when heart replacement is active, which makes the HUD more resilient to overlay-registry resets.
-- If the HUD still breaks, it is more likely a live HUD conflict or render-state conflict than a simple startup timing issue.
-
-Recommended combinations:
-
-- Vanilla-like replacement: `enableHudOverlayIntegration=true`, `replaceVanillaHearts=true`, `showCustomHealthBar=true`
-- Survival-only HUD: also set `showHudOutsideSurvival=false`
-- Text-focused debugging: also set `showCustomHealthText=true`
-- HUD conflict isolation: set `enableHudOverlayIntegration=false`
-
-If another HUD mod is also drawing hearts or a health widget, disable overlay integration first to confirm whether the issue is a layout conflict.
+There are currently no supported user-facing HUD options in `criticalhp-client.toml`.
 
 ## Testing workflow
 
@@ -356,12 +333,6 @@ Useful test commands:
 1. `/ch debug @s`
 2. `/ch debug minecraft:zombie`
 3. `/ch reload`
-
-When changing HUD config:
-
-1. Edit `criticalhp-client.toml`.
-2. Restart the client if needed.
-3. Check for overlap with other HUD mods.
 
 ## Troubleshooting
 
@@ -380,12 +351,6 @@ When changing HUD config:
 ### Effects are working on players but not mobs, or the reverse
 
 - Check the correct effect section. Player targets and mob targets do not share the same runtime table.
-
-### The HUD is duplicated or misplaced
-
-- Set `enableHudOverlayIntegration=false` to isolate HUD conflicts.
-- Then re-enable it and test with `showCustomHealthBar` and `showCustomHealthText` one at a time.
-- If the log shows other mods repeatedly rebuilding or removing overlays, treat the issue as a live HUD conflict rather than a bad config value.
 
 ## Quick examples
 
@@ -414,8 +379,8 @@ That setup would:
 
 - give players 100 max HP
 - double most mob health
-- make skeletons weaker to blunt damage
+- make skeletons weaker to crushing damage
 - make zombies resist pierce damage
-- force TFC javelins to pierce and TFC maces to blunt
+- force TFC javelins to pierce and TFC maces to crushing
 - reduce effect proc chance by normal armor value and, in TFC packs, by TFC armor resistances as well
 - log extra detail while you test
